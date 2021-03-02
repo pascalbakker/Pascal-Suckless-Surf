@@ -104,6 +104,8 @@ typedef struct {
 
 typedef struct Client {
 	GtkWidget *win;
+	GtkWidget *vbox;
+	GtkWidget *urlbar;
 	WebKitWebView *view;
 	WebKitWebInspector *inspector;
 	WebKitFindController *finder;
@@ -150,6 +152,7 @@ typedef struct {
 static void die(const char *errstr, ...);
 static void usage(void);
 static void setup(void);
+static void playexternal(Client *c, const Arg *a);
 static void sigchld(int unused);
 static void sighup(int unused);
 static char *buildfile(const char *path);
@@ -194,6 +197,8 @@ static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event,
                                 gpointer d);
 static gboolean winevent(GtkWidget *w, GdkEvent *e, Client *c);
 static gboolean readsock(GIOChannel *s, GIOCondition ioc, gpointer unused);
+static void changeurlbar(Client *c);
+static void updatewebview(GtkEntry *e, Client *c);
 static void showview(WebKitWebView *v, Client *c);
 static GtkWidget *createwindow(Client *c);
 static gboolean loadfailedtls(WebKitWebView *v, gchar *uri,
@@ -358,13 +363,13 @@ setup(void)
 
 	/* dirs and files */
 	cookiefile = buildfile(cookiefile);
-	 historyfile = buildfile(historyfile);
+	historyfile = buildfile(historyfile);
 	scriptfile = buildfile(scriptfile);
-	certdir    = buildpath(certdir);
+	certdir = buildpath(certdir);
 	if (curconfig[Ephemeral].val.i)
 		cachedir = NULL;
 	else
-		cachedir   = buildpath(cachedir);
+		cachedir = buildpath(cachedir);
 
 	gdkkb = gdk_seat_get_keyboard(gdk_display_get_default_seat(gdpy));
 
@@ -387,7 +392,7 @@ setup(void)
 			                            NULL);
 		} else {
 			fprintf(stderr, "Could not compile regex: %s\n",
-			        certs[i].regex);
+			certs[i].regex);
 			certs[i].regex = NULL;
 		}
 	}
@@ -432,8 +437,7 @@ sigchld(int unused)
 {
 	if (signal(SIGCHLD, sigchld) == SIG_ERR)
 		die("Can't install SIGCHLD handler");
-	while (waitpid(-1, NULL, WNOHANG) > 0)
-		;
+	while (waitpid(-1, NULL, WNOHANG) > 0);
 }
 
 void
@@ -600,11 +604,13 @@ loaduri(Client *c, const Arg *a)
 	} else {
 		webkit_web_view_load_uri(c->view, url);
 		updatetitle(c);
+		changeurlbar(c);
 	}
 
 	g_free(url);
 }
 
+void
 search(Client *c, const Arg *a)
 {
 	Arg arg;
@@ -1432,18 +1438,62 @@ winevent(GtkWidget *w, GdkEvent *e, Client *c)
 }
 
 void
+changeurlbar(Client *c){
+	const char *new_url = geturi(c);
+	gtk_entry_set_text(GTK_ENTRY(c->urlbar),new_url);
+}
+
+void
+updatewebview(GtkEntry *e ,Client *c) {
+	const char* entryText = gtk_entry_get_text(GTK_ENTRY(e));
+	printf("\nrunning search");
+	printf("text: %s\n",entryText);
+	fflush(stdout);
+	Arg arg;
+	char *url;
+	if(g_str_has_prefix(entryText, "https://") ||
+			g_str_has_prefix(entryText, "www.")){
+		url = g_strdup_printf(entryText,"");
+		printf("full match: %s\n",url);
+		fflush(stdout);
+	}else {
+		url = g_strdup_printf(searchurl, entryText);
+	}
+	arg.v = url;
+	loaduri(c, &arg);
+
+	g_free(url);
+}
+
+void
 showview(WebKitWebView *v, Client *c)
 {
 	GdkRGBA bgcolor = { 0 };
 	GdkWindow *gwin;
-
+	printf("new view");
+	fflush(stdout);
 	c->finder = webkit_web_view_get_find_controller(c->view);
 	c->inspector = webkit_web_view_get_inspector(c->view);
 
 	c->pageid = webkit_web_view_get_page_id(c->view);
 	c->win = createwindow(c);
+	//Create url bar
+    c->vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL,0);
+	c->urlbar = gtk_entry_new();
+	const char *uri = geturi(c);
+	gtk_box_pack_start(GTK_BOX(c->vbox),c->urlbar,0,0,0);
+	gtk_entry_set_text(GTK_ENTRY(c->urlbar),uri);
 
-	gtk_container_add(GTK_CONTAINER(c->win), GTK_WIDGET(c->view));
+
+    gtk_box_pack_start(GTK_BOX(c->vbox),GTK_WIDGET(c->view),True,True,0);
+	gtk_container_add(GTK_CONTAINER(c->win), c->vbox);
+
+
+	g_signal_connect(G_OBJECT(c->urlbar), "activate",
+	               G_CALLBACK(updatewebview) , c);
+
+	// Add webkit view
+	//gtk_container_add(GTK_CONTAINER(c->win), GTK_WIDGET(c->view));
 	gtk_widget_show_all(c->win);
 	gtk_widget_grab_focus(GTK_WIDGET(c->view));
 
@@ -1563,7 +1613,7 @@ loadfailedtls(WebKitWebView *v, gchar *uri, GTlsCertificate *cert,
 void
 openmpv(const char* uri){
 	if(fork()==0){
-		char* argument_list[] = {"mpv","--quiet",uri,NULL};
+		const char* argument_list[] = {"mpv","--quiet",uri,NULL};
 		execvp("mpv",argument_list);
 		perror("failed");
 		exit(0);
@@ -1600,6 +1650,7 @@ loadchanged(WebKitWebView *v, WebKitLoadEvent e, Client *c)
 	case WEBKIT_LOAD_FINISHED:
 		seturiparameters(c, uri, loadfinished);
 		updatehistory(uri, c->title);
+		changeurlbar(c);
 //		if (g_str_has_prefix(uri, "https://www.youtube.com/watch")){
 				//int concat_length = strlen(url) + 5 + 3;
 			//openmpv(uri);
@@ -1613,6 +1664,7 @@ loadchanged(WebKitWebView *v, WebKitLoadEvent e, Client *c)
 		break;
 	}
 	updatetitle(c);
+	changeurlbar(c);
 }
 
 void
@@ -1892,9 +1944,11 @@ showcert(Client *c, const Arg *a)
 	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	wcert = gcr_certificate_widget_new(gcrt);
 	g_object_unref(gcrt);
-
+	printf("problemn");
 	gtk_container_add(GTK_CONTAINER(win), GTK_WIDGET(wcert));
 	gtk_widget_show_all(win);
+	printf("end problemn");
+	fflush(stdout);
 }
 
 void
@@ -2040,6 +2094,7 @@ clicknavigate(Client *c, const Arg *a, WebKitHitTestResult *h)
 	navigate(c, a);
 }
 
+
 void
 clicknewwindow(Client *c, const Arg *a, WebKitHitTestResult *h)
 {
@@ -2059,6 +2114,15 @@ clickexternplayer(Client *c, const Arg *a, WebKitHitTestResult *h)
 	Arg arg;
 
 	arg = (Arg)VIDEOPLAY(webkit_hit_test_result_get_media_uri(h));
+	spawn(c, &arg);
+}
+
+void
+playexternal(Client *c, const Arg *a)
+{
+	Arg arg;
+
+	arg = (Arg)VIDEOPLAY(geturi(c));
 	spawn(c, &arg);
 }
 

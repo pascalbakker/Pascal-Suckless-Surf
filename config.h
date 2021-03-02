@@ -6,6 +6,7 @@ static char *styledir       = "~/.surf/styles/";
 static char *certdir        = "~/.surf/certificates/";
 static char *cachedir       = "~/.surf/cache/";
 static char *cookiefile     = "~/.surf/cookies.txt";
+static char *downdir        = "~/Downloads";
 static char *historyfile    = "~/.surf/history.txt";
 static char *searchurl      = "duckduckgo.com/?q=%s";
 static char **plugindirs    = (char*[]){
@@ -136,11 +137,10 @@ p, winid, NULL } }
 }
 
 
-/* VIDEOPLAY(URI) */
 #define VIDEOPLAY(u) {\
-        .v = (const char *[]){ "/bin/sh", "-c", \
-             "mpv \"$0\"", u, NULL \
-        } \
+	.v = (const char *[]){ "/bin/sh", "-c", \
+	     "mpv --really-quiet \"$0\"", u, NULL \
+	} \
 }
 
 /* styles */
@@ -176,7 +176,8 @@ static Key keys[] = {
 	{ MODKEY,                GDK_KEY_slash,  spawn,      SETPROP("_SURF_FIND", "_SURF_FIND", PROMPT_FIND) },
 	{ MODKEY,                GDK_KEY_s,      spawn,      SEARCH() },
 	{ MODKEY,                GDK_KEY_b,      spawn,      BM_ADD("_SURF_URI") },
-    { MODKEY,				 GDK_KEY_m,		 spawn,		 VID("_SURF_URI") },
+	{ MODKEY,                GDK_KEY_w,      playexternal, { 0 } },
+
 
 	{ 0,                     GDK_KEY_Escape, stop,       { 0 } },
 	{ MODKEY,                GDK_KEY_c,      stop,       { 0 } },

@@ -569,7 +569,6 @@ loaduri(Client *c, const Arg *a)
 	struct stat st;
 	char *url, *path, *apath;
 	const char *uri = a->v;
-
 	if (g_strcmp0(uri, "") == 0)
 		return;
 
@@ -594,6 +593,7 @@ loaduri(Client *c, const Arg *a)
 	}
 
 	setatom(c, AtomUri, url);
+
 
 	if (strcmp(url, geturi(c)) == 0) {
 		reload(c, a);
@@ -659,10 +659,11 @@ getatom(Client *c, int a)
 
 void
 updatetitle(Client *c)
-{
+{;
 	char *title;
 	const char *name = c->overtitle ? c->overtitle :
 	                   c->title ? c->title : "";
+		fflush(stdout);
 
 	if (curconfig[ShowIndicators].val.i) {
 		gettogglestats(c);
@@ -1317,7 +1318,6 @@ GtkWidget *
 createview(WebKitWebView *v, WebKitNavigationAction *a, Client *c)
 {
 	Client *n;
-
 	switch (webkit_navigation_action_get_navigation_type(a)) {
 	case WEBKIT_NAVIGATION_TYPE_OTHER: /* fallthrough */
 		/*
@@ -1561,6 +1561,15 @@ loadfailedtls(WebKitWebView *v, gchar *uri, GTlsCertificate *cert,
 }
 
 void
+openmpv(const char* uri){
+	if(fork()==0){
+		char* argument_list[] = {"mpv","--quiet",uri,NULL};
+		execvp("mpv",argument_list);
+		perror("failed");
+		exit(0);
+	}
+}
+void
 loadchanged(WebKitWebView *v, WebKitLoadEvent e, Client *c)
 {
 	const char *uri = geturi(c);
@@ -1591,6 +1600,10 @@ loadchanged(WebKitWebView *v, WebKitLoadEvent e, Client *c)
 	case WEBKIT_LOAD_FINISHED:
 		seturiparameters(c, uri, loadfinished);
 		updatehistory(uri, c->title);
+//		if (g_str_has_prefix(uri, "https://www.youtube.com/watch")){
+				//int concat_length = strlen(url) + 5 + 3;
+			//openmpv(uri);
+//		}
 		/* Disabled until we write some WebKitWebExtension for
 		 * manipulating the DOM directly.
 		evalscript(c, "document.documentElement.style.overflow = '%s'",
@@ -1634,7 +1647,6 @@ mousetargetchanged(WebKitWebView *v, WebKitHitTestResult *h, guint modifiers,
 		c->targeturi = webkit_hit_test_result_get_media_uri(h);
 	else
 		c->targeturi = NULL;
-
 	c->overtitle = c->targeturi;
 	updatetitle(c);
 }
@@ -2034,7 +2046,11 @@ clicknewwindow(Client *c, const Arg *a, WebKitHitTestResult *h)
 	Arg arg;
 
 	arg.v = webkit_hit_test_result_get_link_uri(h);
-	newwindow(c, &arg, a->i);
+	if(g_str_has_prefix(arg.v, "https://www.youtube.com/watch")){
+		openmpv(arg.v);
+	}else{
+		newwindow(c, &arg, a->i);
+	}
 }
 
 void

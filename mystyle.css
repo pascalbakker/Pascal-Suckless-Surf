@@ -1,0 +1,13 @@
+GtkWindow{
+		background-color: black;
+		color: black;
+}
+#myVbox {
+		color: black;
+		background-color:black;
+}
+
+#myEntry{
+		background-color: black;
+		color: white;
+}

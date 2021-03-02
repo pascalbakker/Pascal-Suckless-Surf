@@ -1446,16 +1446,11 @@ changeurlbar(Client *c){
 void
 updatewebview(GtkEntry *e ,Client *c) {
 	const char* entryText = gtk_entry_get_text(GTK_ENTRY(e));
-	printf("\nrunning search");
-	printf("text: %s\n",entryText);
-	fflush(stdout);
 	Arg arg;
 	char *url;
 	if(g_str_has_prefix(entryText, "https://") ||
 			g_str_has_prefix(entryText, "www.")){
 		url = g_strdup_printf(entryText,"");
-		printf("full match: %s\n",url);
-		fflush(stdout);
 	}else {
 		url = g_strdup_printf(searchurl, entryText);
 	}
@@ -1465,6 +1460,23 @@ updatewebview(GtkEntry *e ,Client *c) {
 	g_free(url);
 }
 
+void myCSS(void){
+    GtkCssProvider *provider;
+    GdkDisplay *display;
+    GdkScreen *screen;
+
+    provider = gtk_css_provider_new ();
+    display = gdk_display_get_default ();
+    screen = gdk_display_get_default_screen (display);
+    gtk_style_context_add_provider_for_screen (screen, GTK_STYLE_PROVIDER (provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+
+    const gchar *myCssFile = "mystyle.css";
+    GError *error = 0;
+
+    gtk_css_provider_load_from_file(provider, g_file_new_for_path(myCssFile), &error);
+    g_object_unref (provider);
+}
+
 void
 showview(WebKitWebView *v, Client *c)
 {
@@ -1472,6 +1484,7 @@ showview(WebKitWebView *v, Client *c)
 	GdkWindow *gwin;
 	printf("new view");
 	fflush(stdout);
+	myCSS();
 	c->finder = webkit_web_view_get_find_controller(c->view);
 	c->inspector = webkit_web_view_get_inspector(c->view);
 
@@ -1479,7 +1492,13 @@ showview(WebKitWebView *v, Client *c)
 	c->win = createwindow(c);
 	//Create url bar
     c->vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL,0);
+	gtk_widget_set_name(c->vbox,"myVbox");
 	c->urlbar = gtk_entry_new();
+	gtk_widget_set_name(c->urlbar,"myEntry");
+	gtk_widget_set_halign(c->urlbar, GTK_ALIGN_CENTER);
+	gtk_widget_set_size_request(c->urlbar, 800, 0);
+	gtk_widget_set_margin_top(c->urlbar, 5);
+	gtk_widget_set_margin_bottom(c->urlbar, 5);
 	const char *uri = geturi(c);
 	gtk_box_pack_start(GTK_BOX(c->vbox),c->urlbar,0,0,0);
 	gtk_entry_set_text(GTK_ENTRY(c->urlbar),uri);
@@ -1944,10 +1963,8 @@ showcert(Client *c, const Arg *a)
 	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	wcert = gcr_certificate_widget_new(gcrt);
 	g_object_unref(gcrt);
-	printf("problemn");
 	gtk_container_add(GTK_CONTAINER(win), GTK_WIDGET(wcert));
 	gtk_widget_show_all(win);
-	printf("end problemn");
 	fflush(stdout);
 }
 
@@ -2133,7 +2150,7 @@ main(int argc, char *argv[])
 	Client *c;
 
 	memset(&arg, 0, sizeof(arg));
-
+	myCSS();
 	/* command line args */
 	ARGBEGIN {
 	case 'a':

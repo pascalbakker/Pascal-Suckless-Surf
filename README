@@ -8,6 +8,16 @@ In order to build surf you need GTK+ and Webkit/GTK+ header files.
 
 In order to use the functionality of the url-bar, also install dmenu[0].
 
+
+My Additions
+------------
+*A Url bar at the top that can be used to search.
+*Middle click on a youtube video to open it in mpv.
+*Play vidoes in mpv using hotkey.
+*Duckduckgo.com homepage
+*Download Support
+*History Support
+
 Installation
 ------------
 Edit config.mk to match your local setup (surf is installed into

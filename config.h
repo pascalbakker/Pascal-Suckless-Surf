@@ -169,6 +169,7 @@ static SiteSpecific certs[] = {
  * If you use anything else but MODKEY and GDK_SHIFT_MASK, don't forget to
  * edit the CLEANMASK() macro.
  */
+
 static Key keys[] = {
 	/* modifier              keyval          function    arg */
 	{ MODKEY,                GDK_KEY_g,      spawn,      SETPROP("_SURF_URI", "_SURF_GO", PROMPT_GO) },
@@ -196,9 +197,6 @@ static Key keys[] = {
 	{ MODKEY,                GDK_KEY_i,      scrollh,    { .i = +10 } },
 	{ MODKEY,                GDK_KEY_u,      scrollh,    { .i = -10 } },
 
-
-	{ MODKEY|GDK_SHIFT_MASK,                GDK_SCROLL_UP,      zoom,    { .i = +1 } },
-	{ MODKEY|GDK_SHIFT_MASK,                GDK_SCROLL_DOWN,      zoom,    { .i = -1 } },
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_j,      zoom,       { .i = -1 } },
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_k,      zoom,       { .i = +1 } },
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_q,      zoom,       { .i = 0  } },
@@ -239,6 +237,8 @@ static Button buttons[] = {
 	{ OnAny,        0,              8,      clicknavigate,  { .i = -1 },    1 },
 	{ OnAny,        0,              9,      clicknavigate,  { .i = +1 },    1 },
 	{ OnMedia,      MODKEY,         1,      clickexternplayer, { 0 },       1 },
+	{ OnDoc, MODKEY, 4, zoom, {.i = +1} },
+	{ OnDoc, MODKEY, 5, zoom, {.i = -1} },
 };
 
 #define HOMEPAGE "https://duckduckgo.com/"

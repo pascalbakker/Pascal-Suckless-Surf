@@ -6,6 +6,7 @@ static char *styledir       = "~/.surf/styles/";
 static char *certdir        = "~/.surf/certificates/";
 static char *cachedir       = "~/.surf/cache/";
 static char *cookiefile     = "~/.surf/cookies.txt";
+static char *downdir        = "~/Downloads";
 static char *historyfile    = "~/.surf/history.txt";
 static char *searchurl      = "duckduckgo.com/?q=%s";
 static char **plugindirs    = (char*[]){
@@ -130,20 +131,16 @@ p, winid, NULL } }
 
 #define VID(r) {\
         .v = (const char *[]){ "/bin/sh", "-c", \
-             "(echo $(xprop -id $0 $1) | cut -d '\"' -f2 " \
-             "| sed 's/.*https*:\\/\\/\\(www\\.\\)\\?//' && cat ~/.surf/bookmarks) " \
-             "| awk '!seen[$0]++' > ~/.surf/bookmarks.tmp && " \
-             "mv ~/.surf/bookmarks.tmp ~/.surf/bookmarks", \
-             winid, r, NULL \
+             "(echo $(xprop -id $0 $1))" \
+			, winid, r, NULL \
         } \
 }
 
 
-/* VIDEOPLAY(URI) */
 #define VIDEOPLAY(u) {\
-        .v = (const char *[]){ "/bin/sh", "-c", \
-             "mpv \"$0\"", u, NULL \
-        } \
+	.v = (const char *[]){ "/bin/sh", "-c", \
+	     "mpv --really-quiet \"$0\"", u, NULL \
+	} \
 }
 
 /* styles */
@@ -172,6 +169,7 @@ static SiteSpecific certs[] = {
  * If you use anything else but MODKEY and GDK_SHIFT_MASK, don't forget to
  * edit the CLEANMASK() macro.
  */
+
 static Key keys[] = {
 	/* modifier              keyval          function    arg */
 	{ MODKEY,                GDK_KEY_g,      spawn,      SETPROP("_SURF_URI", "_SURF_GO", PROMPT_GO) },
@@ -179,7 +177,8 @@ static Key keys[] = {
 	{ MODKEY,                GDK_KEY_slash,  spawn,      SETPROP("_SURF_FIND", "_SURF_FIND", PROMPT_FIND) },
 	{ MODKEY,                GDK_KEY_s,      spawn,      SEARCH() },
 	{ MODKEY,                GDK_KEY_b,      spawn,      BM_ADD("_SURF_URI") },
-    { MODKEY,				 GDK_KEY_m,		 spawn,		 VID("_SURF_URI") },
+	{ MODKEY,                GDK_KEY_w,      playexternal, { 0 } },
+
 
 	{ 0,                     GDK_KEY_Escape, stop,       { 0 } },
 	{ MODKEY,                GDK_KEY_c,      stop,       { 0 } },
@@ -198,9 +197,6 @@ static Key keys[] = {
 	{ MODKEY,                GDK_KEY_i,      scrollh,    { .i = +10 } },
 	{ MODKEY,                GDK_KEY_u,      scrollh,    { .i = -10 } },
 
-
-	{ MODKEY|GDK_SHIFT_MASK,                GDK_SCROLL_UP,      zoom,    { .i = +1 } },
-	{ MODKEY|GDK_SHIFT_MASK,                GDK_SCROLL_DOWN,      zoom,    { .i = -1 } },
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_j,      zoom,       { .i = -1 } },
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_k,      zoom,       { .i = +1 } },
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_q,      zoom,       { .i = 0  } },
@@ -241,6 +237,8 @@ static Button buttons[] = {
 	{ OnAny,        0,              8,      clicknavigate,  { .i = -1 },    1 },
 	{ OnAny,        0,              9,      clicknavigate,  { .i = +1 },    1 },
 	{ OnMedia,      MODKEY,         1,      clickexternplayer, { 0 },       1 },
+	{OnAny, MODKEY|GDK_SHIFT_MASK, 1 , zoom, {.i = +1}},
+	{OnAny, MODKEY|GDK_SHIFT_MASK, 2 , zoom, {.i = -1}},
 };
 
 #define HOMEPAGE "https://duckduckgo.com/"

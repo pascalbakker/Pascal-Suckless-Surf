@@ -245,6 +245,7 @@ static void togglecookiepolicy(Client *c, const Arg *a);
 static void toggleinspector(Client *c, const Arg *a);
 static void find(Client *c, const Arg *a);
 static void search(Client *c, const Arg *a);
+static void openmpv(const char* uri);
 
 /* Buttons */
 static void clicknavigate(Client *c, const Arg *a, WebKitHitTestResult *h);
@@ -614,13 +615,9 @@ void
 search(Client *c, const Arg *a)
 {
 	Arg arg;
-	char *url;
-
-	url = g_strdup_printf(searchurl, a->v);
-	arg.v = url;
+	arg.v = g_strdup_printf(searchurl, a->v);
 	loaduri(c, &arg);
-
-	g_free(url);
+	g_free(arg.v);
 }
 
 const char *
@@ -669,7 +666,6 @@ updatetitle(Client *c)
 	char *title;
 	const char *name = c->overtitle ? c->overtitle :
 	                   c->title ? c->title : "";
-		fflush(stdout);
 
 	if (curconfig[ShowIndicators].val.i) {
 		gettogglestats(c);
@@ -1456,7 +1452,6 @@ updatewebview(GtkEntry *e ,Client *c) {
 	}
 	arg.v = url;
 	loaduri(c, &arg);
-
 	g_free(url);
 }
 
@@ -1470,7 +1465,7 @@ void myCSS(void){
     screen = gdk_display_get_default_screen (display);
     gtk_style_context_add_provider_for_screen (screen, GTK_STYLE_PROVIDER (provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 
-    const gchar *myCssFile = "mystyle.css";
+    const gchar *myCssFile = "~/.surf/styles/mystyle.css";
     GError *error = 0;
 
     gtk_css_provider_load_from_file(provider, g_file_new_for_path(myCssFile), &error);
@@ -1478,38 +1473,27 @@ void myCSS(void){
 }
 
 void
+select_full_url(GtkEntry *e, Client *c){
+		gtk_editable_select_region(GTK_ENTRY(e),0 ,-1);
+}
+
+void
 showview(WebKitWebView *v, Client *c)
 {
 	GdkRGBA bgcolor = { 0 };
 	GdkWindow *gwin;
-	printf("new view");
-	fflush(stdout);
-	myCSS();
 	c->finder = webkit_web_view_get_find_controller(c->view);
 	c->inspector = webkit_web_view_get_inspector(c->view);
 
 	c->pageid = webkit_web_view_get_page_id(c->view);
 	c->win = createwindow(c);
-	//Create url bar
-    c->vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL,0);
-	gtk_widget_set_name(c->vbox,"myVbox");
-	c->urlbar = gtk_entry_new();
-	gtk_widget_set_name(c->urlbar,"myEntry");
-	gtk_widget_set_halign(c->urlbar, GTK_ALIGN_CENTER);
-	gtk_widget_set_size_request(c->urlbar, 800, 0);
-	gtk_widget_set_margin_top(c->urlbar, 5);
-	gtk_widget_set_margin_bottom(c->urlbar, 5);
-	const char *uri = geturi(c);
-	gtk_box_pack_start(GTK_BOX(c->vbox),c->urlbar,0,0,0);
-	gtk_entry_set_text(GTK_ENTRY(c->urlbar),uri);
-
-
-    gtk_box_pack_start(GTK_BOX(c->vbox),GTK_WIDGET(c->view),True,True,0);
 	gtk_container_add(GTK_CONTAINER(c->win), c->vbox);
 
 
 	g_signal_connect(G_OBJECT(c->urlbar), "activate",
 	               G_CALLBACK(updatewebview) , c);
+	g_signal_connect(G_OBJECT(c->urlbar), "button-release-event",
+	               G_CALLBACK(select_full_url) , c);
 
 	// Add webkit view
 	//gtk_container_add(GTK_CONTAINER(c->win), GTK_WIDGET(c->view));
@@ -1542,6 +1526,7 @@ showview(WebKitWebView *v, Client *c)
 
 	setatom(c, AtomFind, "");
 	setatom(c, AtomUri, "about:blank");
+	myCSS();
 }
 
 GtkWidget *
@@ -1638,7 +1623,9 @@ openmpv(const char* uri){
 		exit(0);
 	}
 }
+
 void
+
 loadchanged(WebKitWebView *v, WebKitLoadEvent e, Client *c)
 {
 	const char *uri = geturi(c);
@@ -1670,20 +1657,10 @@ loadchanged(WebKitWebView *v, WebKitLoadEvent e, Client *c)
 		seturiparameters(c, uri, loadfinished);
 		updatehistory(uri, c->title);
 		changeurlbar(c);
-//		if (g_str_has_prefix(uri, "https://www.youtube.com/watch")){
-				//int concat_length = strlen(url) + 5 + 3;
-			//openmpv(uri);
-//		}
-		/* Disabled until we write some WebKitWebExtension for
-		 * manipulating the DOM directly.
-		evalscript(c, "document.documentElement.style.overflow = '%s'",
-		    enablescrollbars ? "auto" : "hidden");
-		*/
 		runscript(c);
 		break;
 	}
 	updatetitle(c);
-	changeurlbar(c);
 }
 
 void
@@ -1719,7 +1696,7 @@ mousetargetchanged(WebKitWebView *v, WebKitHitTestResult *h, guint modifiers,
 	else
 		c->targeturi = NULL;
 	c->overtitle = c->targeturi;
-	updatetitle(c);
+	//updatetitle(c);
 }
 
 gboolean
@@ -2283,6 +2260,7 @@ main(int argc, char *argv[])
 	if (argc > 0)
 		arg.v = argv[0];
 	else
+		// set initial homepage
 #ifdef HOMEPAGE
 	arg.v = HOMEPAGE;
 #else
@@ -2290,6 +2268,20 @@ main(int argc, char *argv[])
 #endif
 	setup();
 	c = newclient(NULL);
+	//Create url bar
+	c->vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL,0);
+	gtk_widget_set_name(c->vbox,"myVbox");
+	c->urlbar = gtk_entry_new();
+	gtk_widget_set_name(c->urlbar,"myEntry");
+	gtk_widget_set_halign(c->urlbar, GTK_ALIGN_CENTER);
+	gtk_widget_set_size_request(c->urlbar, 800, 0);
+	gtk_widget_set_margin_top(c->urlbar, 5);
+	gtk_widget_set_margin_bottom(c->urlbar, 5);
+	const char *uri = geturi(c);
+	gtk_box_pack_start(GTK_BOX(c->vbox),c->urlbar,0,0,0);
+	gtk_entry_set_text(GTK_ENTRY(c->urlbar),uri);
+    gtk_box_pack_start(GTK_BOX(c->vbox),GTK_WIDGET(c->view),True,True,0);
+
 	showview(NULL, c);
 
 	loaduri(c, &arg);
